@@ -1,1 +1,61 @@
+SUBJECT: [ACTION REQUIRED] Security Tools Setup — Complete by [DATE]
 
+Hi [Name / Team],
+
+We are rolling out SecurOps — our company-wide shift-left security system.
+This protects our code, customers, and company from security breaches.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🚀 SETUP — 5 MINUTES, ONE COMMAND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+macOS / Linux:
+  Open Terminal and run:
+
+  bash <(curl -s https://raw.githubusercontent.com/yourcompany/securops-config/main/scripts/onboard.sh)
+
+Windows:
+  Open Git Bash and run:
+
+  bash <(curl -s https://raw.githubusercontent.com/yourcompany/securops-config/main/scripts/onboard.sh)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🛡️ WHAT THIS DOES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Automatically scans code on every commit
+✅ Blocks AWS keys, API tokens, passwords before they reach git
+✅ Works with ALL IDEs (VS Code, IntelliJ, Vim, etc.)
+✅ Works with ALL languages (Python, Java, JS, Go, etc.)
+✅ Runs in the background — you won't notice it unless there's an issue
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ❓ COMMON QUESTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q: Will this slow down my commits?
+A: Less than 3 seconds per commit.
+
+Q: What if I need to use a real secret in tests?
+A: Request an exception via Jira (Project=SECURITY). Approved in <1 hour.
+
+Q: What if it blocks something legitimate?
+A: Slack us immediately: #securops-support. We will fix it fast.
+
+Q: Is this mandatory?
+A: Yes. Required for our SOC2 compliance. Deadline: [DATE].
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  🆘 NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Slack:  #securops-support (fastest)
+Email:  security@yourcompany.com
+Wiki:   https://wiki.yourcompany.com/securops
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Thank you for helping keep our platform secure!
+
+Security Team
+YourCompany
