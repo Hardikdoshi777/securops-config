@@ -375,7 +375,7 @@ jobs:
           echo ""
           if [ "$FAILED" = "true" ]; then
             echo "  ❌ GATE FAILED — merge BLOCKED"
-            echo "  Fix all issues or: security@yourcompany.com"
+            echo "  Fix all issues or: hardikdoshi@devrepublic.nl"
             exit 1
           fi
           echo "  ✅ GATE PASSED — safe to merge"

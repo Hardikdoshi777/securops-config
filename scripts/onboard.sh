@@ -27,7 +27,7 @@ BRANCH="main"
 BASE_URL="https://raw.githubusercontent.com/${GITHUB_ORG}/${CONFIG_REPO}/${BRANCH}"
 SECUROPS_DIR="$HOME/.securops"
 SUPPORT_SLACK="#securops-support"
-SUPPORT_EMAIL="security@yourcompany.com"
+SUPPORT_EMAIL="hardikdoshi@devrepublic.nl"
 
 # ─────────────────────────────────────────────────────────
 # 6 FILES that get copied into every project repo

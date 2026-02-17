@@ -50,7 +50,7 @@ A: Yes. Required for our SOC2 compliance. Deadline: [DATE].
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Slack:  #securops-support (fastest)
-Email:  hddevrepublic@gmail.com
+Email:  hardikdoshi@devrepublic.nl
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
