@@ -62,12 +62,14 @@ jobs:
         run: |
           semgrep scan --config=auto --config=p/owasp-top-ten \
             --config=p/security-audit --config=p/cwe-top-25 \
+            --exclude=.gitleaks.toml \
             --sarif --output=semgrep.sarif \
             --severity=ERROR --severity=WARNING --quiet || true
       - name: Semgrep JSON
         run: |
           semgrep scan --config=auto --config=p/owasp-top-ten \
             --config=p/security-audit --config=p/cwe-top-25 \
+            --exclude=.gitleaks.toml \
             --json --output=semgrep.json \
             --severity=ERROR --severity=WARNING --quiet || true
       - id: count
