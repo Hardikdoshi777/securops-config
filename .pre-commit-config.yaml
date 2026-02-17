@@ -63,6 +63,7 @@ repos:
     hooks:
       - id: detect-private-key
         name: "🔑 Private Key Detector"
+        exclude: '\.gitleaks\.toml$'
       - id: check-merge-conflict
         name: "🔀 Merge Conflict Checker"
       - id: check-added-large-files
