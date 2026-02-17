@@ -37,7 +37,7 @@ if [ $EXIT_CODE -eq 0 ]; then
 else
   echo "❌ HIGH/CRITICAL vulnerabilities found — push blocked"
   echo "   Fix vulnerabilities or request an exception:"
-  echo "   security@yourcompany.com"
+  echo "   hddevrepublic@gmail.com"
 fi
 
 exit $EXIT_CODE
