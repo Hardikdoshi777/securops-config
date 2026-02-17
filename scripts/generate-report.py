@@ -101,13 +101,15 @@ for res in sca_data.get("Results", []):
 # DAST findings
 nuclei_rows = load_jsonl("reports/report-dast/nuclei.json")
 for r in nuclei_rows[:10]:
+    if not isinstance(r, dict):
+        continue
     sev = r.get("info", {}).get("severity", "info").upper()
     if sev in ["CRITICAL", "HIGH", "MEDIUM"]:
         findings.append({
             "tool": "Nuclei", "severity": sev,
             "title": r.get("info", {}).get("name", ""),
             "file": r.get("matched-at", r.get("host", "")),
-            "detail": r.get("info", {}).get("description", "")[:120],
+            "detail": str(r.get("info", {}).get("description", ""))[:120],
         })
 
 # IaC findings
