@@ -16,7 +16,7 @@ repos:
       - id: gitleaks
         name: "🔐 Secret Scanner (Gitleaks)"
         description: "Blocks secrets before they reach git"
-        entry: gitleaks protect --verbose --redact --staged
+        entry: gitleaks protect --verbose --redact --staged --config .gitleaks.toml
         language: golang
         pass_filenames: false
         stages: [commit]
