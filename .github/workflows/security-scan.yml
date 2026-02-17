@@ -172,7 +172,14 @@ jobs:
           cat nuclei-web.json >> nuclei.json 2>/dev/null || true
       - id: count
         if: always()
-        run: echo "count=$(jq -s 'length' nuclei.json 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+        run: |
+          if [ -f nuclei.json ] && [ -s nuclei.json ]; then
+            C=$(jq -s 'length' nuclei.json 2>/dev/null)
+            [ -z "$C" ] && C=0
+          else
+            C=0
+          fi
+          echo "count=$C" >> $GITHUB_OUTPUT
       - name: Gate on CRITICAL/HIGH
         run: |
           CRIT=$(jq -s '[.[]|select(.info.severity=="critical")]|length' nuclei.json 2>/dev/null || echo 0)
