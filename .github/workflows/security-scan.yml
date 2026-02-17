@@ -1,15 +1,6 @@
-# ============================================================
-# SecurOps GitHub Actions Security Pipeline
-# File: .github/workflows/security-scan.yml
-#
-# ✅ Optimized for PUBLIC repository (GitHub Advanced Security free)
-# ✅ SARIF results show in GitHub Security tab → Code scanning alerts
-# ✅ CodeQL action v4 (v3 deprecated Dec 2026)
-# ✅ Semgrep SARIF + JSON split into separate steps
-# ✅ Trivy pinned to stable version
-# ============================================================
-
-name: "🛡️ SecurOps Security Pipeline"
+name: "🛡️ SecurOps — Complete Security Pipeline"
+# ✅ Gitleaks (Secrets) + Semgrep (SAST) + Trivy (SCA) + Nuclei (DAST) + Checkov (IaC)
+# ✅ AI Auto-Fix (Claude) + Dashboard + Enrollment Tracking
 
 on:
   pull_request:
@@ -17,142 +8,100 @@ on:
   push:
     branches: [main, master]
   schedule:
-    - cron: "0 2 * * MON"  # Weekly scan Monday 2AM
+    - cron: "0 2 * * MON"
 
 permissions:
-  contents: read
-  security-events: write   # ✅ Enables SARIF upload to GitHub Security tab
-  pull-requests: write     # ✅ Enables PR comments
+  contents: write
+  security-events: write
+  pull-requests: write
+  issues: write
 
 jobs:
 
   # ══════════════════════════════════════════════════════════
-  # JOB 1: SECRET SCANNING (Gitleaks)
+  # JOB 1: SECRETS — Gitleaks ✅ (was already done)
   # ══════════════════════════════════════════════════════════
   secret-scan:
-    name: "🔐 Secret Scanning"
+    name: "🔐 Secrets (Gitleaks)"
     runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.count.outputs.count }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload Gitleaks report
+      - id: count
         if: always()
-        uses: actions/upload-artifact@v4
+        run: |
+          C=$(jq '.runs[0].results|length' results/gitleaks.sarif 2>/dev/null || echo 0)
+          echo "count=$C" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: secret-scan-report
+          name: report-secrets
           path: results/
           if-no-files-found: ignore
           retention-days: 30
 
   # ══════════════════════════════════════════════════════════
-  # JOB 2: SAST SCANNING (Semgrep)
+  # JOB 2: SAST — Semgrep ✅ (was already done)
   # ══════════════════════════════════════════════════════════
   sast-scan:
-    name: "🔍 SAST Scanning"
+    name: "🔍 SAST (Semgrep)"
     runs-on: ubuntu-latest
     container:
       image: returntocorp/semgrep
-
+    outputs:
+      count: ${{ steps.count.outputs.count }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # ── SARIF output (for GitHub Security tab) ──────────
-      - name: Run Semgrep (SARIF)
+      - uses: actions/checkout@v4
+      - name: Semgrep SARIF
         run: |
-          semgrep scan \
-            --config=auto \
-            --config=p/owasp-top-ten \
-            --config=p/security-audit \
-            --config=p/cwe-top-25 \
-            --exclude=.gitleaks.toml \
-            --sarif \
-            --output=semgrep.sarif \
-            --severity=ERROR \
-            --severity=WARNING \
-            --quiet || true
-
-      # ── JSON output (for report + blocking decision) ─────
-      - name: Run Semgrep (JSON)
+          semgrep scan --config=auto --config=p/owasp-top-ten \
+            --config=p/security-audit --config=p/cwe-top-25 \
+            --sarif --output=semgrep.sarif \
+            --severity=ERROR --severity=WARNING --quiet || true
+      - name: Semgrep JSON
         run: |
-          semgrep scan \
-            --config=auto \
-            --config=p/owasp-top-ten \
-            --config=p/security-audit \
-            --config=p/cwe-top-25 \
-            --exclude=.gitleaks.toml \
-            --json \
-            --output=semgrep.json \
-            --severity=ERROR \
-            --severity=WARNING \
-            --quiet || true
-
-      # ── Upload to GitHub Security tab ────────────────────
-      # ✅ Works now — repo is public (GHAS free)
-      # Results appear under Security → Code scanning alerts
-      - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+          semgrep scan --config=auto --config=p/owasp-top-ten \
+            --config=p/security-audit --config=p/cwe-top-25 \
+            --json --output=semgrep.json \
+            --severity=ERROR --severity=WARNING --quiet || true
+      - id: count
+        if: always()
+        run: echo "count=$(jq '[.results[]?]|length' semgrep.json 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: semgrep.sarif
           category: semgrep
-
-      # ── Save as downloadable artifact ────────────────────
-      - name: Upload SAST report artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: sast-report
-          path: |
-            semgrep.sarif
-            semgrep.json
+          name: report-sast
+          path: semgrep.*
           if-no-files-found: ignore
           retention-days: 30
-
-      # ── Block pipeline on HIGH/ERROR severity ─────────────
-      - name: Block on HIGH severity issues
+      - name: Gate on HIGH
         run: |
-          if [ ! -f semgrep.json ]; then
-            echo "⚠️  semgrep.json not found — skipping severity check"
-            exit 0
-          fi
-
-          COUNT=$(jq '[.results[]? | select(.extra.severity=="ERROR")] | length' semgrep.json 2>/dev/null || echo "0")
-          echo "HIGH severity issues: $COUNT"
-
-          if [ "$COUNT" -gt "0" ]; then
-            echo ""
-            echo "❌ Found $COUNT HIGH severity issue(s) — blocking pipeline"
-            echo ""
-            jq -r '.results[] | select(.extra.severity=="ERROR") | "  • [\(.path):\(.start.line)] \(.extra.message)"' semgrep.json || true
-            echo ""
-            echo "Fix issues or request exception: security@yourcompany.com"
-            exit 1
-          fi
-
-          echo "✅ No HIGH severity issues found"
+          C=$(jq '[.results[]?|select(.extra.severity=="ERROR")]|length' semgrep.json 2>/dev/null || echo 0)
+          [ "$C" -gt 0 ] && jq -r '.results[]|select(.extra.severity=="ERROR")|"  ❌ [\(.path):\(.start.line)] \(.extra.message)"' semgrep.json && exit 1
+          echo "✅ No HIGH SAST issues"
 
   # ══════════════════════════════════════════════════════════
-  # JOB 3: DEPENDENCY SCANNING (Trivy)
+  # JOB 3: SCA — Trivy ✅ (was already done)
   # ══════════════════════════════════════════════════════════
-  dependency-scan:
-    name: "🛡️ Dependency Scanning"
+  sca-scan:
+    name: "🛡️ SCA (Trivy)"
     runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.count.outputs.count }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # ── SARIF output (for GitHub Security tab) ──────────
-      - name: Run Trivy (SARIF)
-        uses: aquasecurity/trivy-action@0.28.0
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           scan-ref: "."
@@ -160,168 +109,264 @@ jobs:
           output: trivy.sarif
           severity: "CRITICAL,HIGH"
           exit-code: "0"
-
-      # ── Upload to GitHub Security tab ────────────────────
-      # ✅ Works now — repo is public (GHAS free)
-      # Results appear under Security → Code scanning alerts
-      - name: Upload SARIF to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v4
+      - uses: github/codeql-action/upload-sarif@v4
         if: always()
         with:
           sarif_file: trivy.sarif
           category: trivy
-
-      # ── JSON output (for blocking decision) ─────────────
-      - name: Run Trivy (JSON + gate)
-        uses: aquasecurity/trivy-action@0.28.0
+      - uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           scan-ref: "."
           format: json
           output: trivy.json
           severity: "CRITICAL,HIGH"
-          exit-code: "1"   # ❌ Blocks if CRITICAL/HIGH CVEs found
-
-      # ── Save as downloadable artifact ────────────────────
-      - name: Upload dependency report artifact
-        uses: actions/upload-artifact@v4
+          exit-code: "1"
+      - id: count
+        if: always()
+        run: echo "count=$(jq '[.Results[]?.Vulnerabilities[]?]|length' trivy.json 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: dependency-report
-          path: |
-            trivy.sarif
-            trivy.json
+          name: report-sca
+          path: trivy.*
           if-no-files-found: ignore
           retention-days: 30
 
   # ══════════════════════════════════════════════════════════
-  # JOB 4: GENERATE SECURITY DASHBOARD
+  # JOB 4: DAST — Nuclei ✅ NEW
   # ══════════════════════════════════════════════════════════
-  generate-report:
-    name: "📊 Security Report"
+  dast-scan:
+    name: "🌐 DAST (Nuclei)"
     runs-on: ubuntu-latest
-    needs: [secret-scan, sast-scan, dependency-scan]
-    if: always()
+    outputs:
+      count: ${{ steps.count.outputs.count }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - name: Install Nuclei
+        run: |
+          wget -qO /tmp/n.zip \
+            https://github.com/projectdiscovery/nuclei/releases/download/v3.2.0/nuclei_3.2.0_linux_amd64.zip
+          unzip -q /tmp/n.zip -d /tmp
+          sudo mv /tmp/nuclei /usr/local/bin/
+          nuclei -update-templates -silent 2>/dev/null || true
+      - name: Nuclei file scan (configs + exposed secrets)
+        run: |
+          nuclei -target . \
+            -tags exposure,config,file,token \
+            -severity medium,high,critical \
+            -json-export nuclei.json \
+            -no-interactsh -silent || true
+      - name: Nuclei URL scan (if TARGET_URL secret is set)
+        if: ${{ env.TARGET_URL != '' }}
+        env:
+          TARGET_URL: ${{ secrets.TARGET_URL }}
+        run: |
+          nuclei -target "$TARGET_URL" \
+            -tags oast,xss,sqli,ssrf,rce,lfi \
+            -severity high,critical \
+            -json-export nuclei-web.json \
+            -no-interactsh -silent || true
+          cat nuclei-web.json >> nuclei.json 2>/dev/null || true
+      - id: count
+        if: always()
+        run: echo "count=$(jq -s 'length' nuclei.json 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      - name: Gate on CRITICAL/HIGH
+        run: |
+          CRIT=$(jq -s '[.[]|select(.info.severity=="critical")]|length' nuclei.json 2>/dev/null || echo 0)
+          HIGH=$(jq -s '[.[]|select(.info.severity=="high")]|length' nuclei.json 2>/dev/null || echo 0)
+          if [ "$CRIT" -gt 0 ] || [ "$HIGH" -gt 0 ]; then
+            jq -rs '.[]|select(.info.severity=="critical" or .info.severity=="high")|"  ❌ [\(.info.severity|ascii_upcase)] \(.info.name)"' nuclei.json || true
+            exit 1
+          fi
+          echo "✅ No CRITICAL/HIGH Nuclei findings"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-dast
+          path: nuclei.json
+          if-no-files-found: ignore
+          retention-days: 30
 
+  # ══════════════════════════════════════════════════════════
+  # JOB 5: IaC — Checkov ✅ NEW
+  # ══════════════════════════════════════════════════════════
+  iac-scan:
+    name: "🏗️ IaC (Checkov)"
+    runs-on: ubuntu-latest
+    outputs:
+      count: ${{ steps.count.outputs.count }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install checkov --quiet
+      - name: Checkov JSON
+        run: |
+          checkov -d . --output json --output-file checkov.json \
+            --soft-fail --quiet --skip-check CKV_GIT_1 2>/dev/null || true
+      - name: Checkov SARIF
+        run: |
+          checkov -d . --output sarif --output-file checkov.sarif \
+            --soft-fail --quiet --skip-check CKV_GIT_1 2>/dev/null || true
+      - id: count
+        if: always()
+        run: echo "count=$(jq '[.results?.failed_checks[]?]|length' checkov.json 2>/dev/null || echo 0)" >> $GITHUB_OUTPUT
+      - uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+          category: checkov
+      - name: Gate on CRITICAL IaC
+        run: |
+          C=$(jq '[.results?.failed_checks[]?|select(.severity=="CRITICAL" and .check_result.result=="FAILED")]|length' checkov.json 2>/dev/null || echo 0)
+          if [ "$C" -gt 0 ]; then
+            jq -r '.results?.failed_checks[]?|select(.severity=="CRITICAL" and .check_result.result=="FAILED")|"  ❌ \(.check_id) \(.check.name)"' checkov.json || true
+            exit 1
+          fi
+          echo "✅ No CRITICAL IaC issues"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-iac
+          path: checkov.*
+          if-no-files-found: ignore
+          retention-days: 30
+
+  # ══════════════════════════════════════════════════════════
+  # JOB 6: AI AUTO-FIX — Claude ✅ NEW
+  # Triggers only when scans fail on main branch push
+  # Requires: ANTHROPIC_API_KEY in repo secrets
+  # ══════════════════════════════════════════════════════════
+  ai-auto-fix:
+    name: "🤖 AI Auto-Fix (Claude)"
+    runs-on: ubuntu-latest
+    needs: [secret-scan, sast-scan, sca-scan, dast-scan, iac-scan]
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      (needs.secret-scan.result == 'failure' ||
+       needs.sast-scan.result   == 'failure' ||
+       needs.sca-scan.result    == 'failure' ||
+       needs.dast-scan.result   == 'failure' ||
+       needs.iac-scan.result    == 'failure')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Download all scan reports
         uses: actions/download-artifact@v4
         with:
           path: reports/
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - run: pip install anthropic --quiet
+      - name: Claude AI Auto-Fix
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: python scripts/ai-auto-fix.py
 
-      - name: Install Python dependencies
-        run: pip install jinja2
-
-      - name: Generate HTML security dashboard
-        run: |
-          if [ -f scripts/generate-report.py ]; then
-            python scripts/generate-report.py
-          else
-            cat > security-summary.md << 'SUMMARY'
-          ## 🛡️ SecurOps Security Scan Results
-
-          | Scan | Result |
-          |------|--------|
-          | 🔐 Secret Scanning | ${{ needs.secret-scan.result }} |
-          | 🔍 SAST Scanning | ${{ needs.sast-scan.result }} |
-          | 🛡️ Dependency Scanning | ${{ needs.dependency-scan.result }} |
-
-          _See [Actions artifacts](../actions) for full reports._
-          SUMMARY
-          fi
-
-      - name: Upload security dashboard artifact
-        uses: actions/upload-artifact@v4
-        if: always()
+  # ══════════════════════════════════════════════════════════
+  # JOB 7: DASHBOARD + ENROLLMENT TRACKING ✅ NEW
+  # ══════════════════════════════════════════════════════════
+  dashboard:
+    name: "📊 Dashboard & Enrollment"
+    runs-on: ubuntu-latest
+    needs: [secret-scan, sast-scan, sca-scan, dast-scan, iac-scan]
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: reports/
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install jinja2 --quiet
+      - name: Generate dashboard + update enrollment
+        env:
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SECRET_RESULT: ${{ needs.secret-scan.result }}
+          SECRET_COUNT: ${{ needs.secret-scan.outputs.count }}
+          SAST_RESULT: ${{ needs.sast-scan.result }}
+          SAST_COUNT: ${{ needs.sast-scan.outputs.count }}
+          SCA_RESULT: ${{ needs.sca-scan.result }}
+          SCA_COUNT: ${{ needs.sca-scan.outputs.count }}
+          DAST_RESULT: ${{ needs.dast-scan.result }}
+          DAST_COUNT: ${{ needs.dast-scan.outputs.count }}
+          IAC_RESULT: ${{ needs.iac-scan.result }}
+          IAC_COUNT: ${{ needs.iac-scan.outputs.count }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref_name }}
+        run: python scripts/generate-report.py
+      - uses: actions/upload-artifact@v4
         with:
           name: security-dashboard
           path: |
             security-dashboard.html
             security-summary.md
+            enrollment-tracking.json
           if-no-files-found: ignore
           retention-days: 90
-
-      # ── Comment results on PR ─────────────────────────────
-      - name: Comment results on PR
+      - name: PR comment with results
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            let summary = '';
-            try {
-              summary = fs.readFileSync('security-summary.md', 'utf8');
-            } catch(e) {
-              summary = [
-                '## 🛡️ SecurOps Security Scan Results',
-                '',
-                '| Scan | Result |',
-                '|------|--------|',
-                `| 🔐 Secret Scanning | ${{ needs.secret-scan.result }} |`,
-                `| 🔍 SAST Scanning | ${{ needs.sast-scan.result }} |`,
-                `| 🛡️ Dependency Scanning | ${{ needs.dependency-scan.result }} |`,
-              ].join('\n');
-            }
-
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number
+            let body = '';
+            try { body = fs.readFileSync('security-summary.md', 'utf8'); }
+            catch(e) { body = '## 🛡️ SecurOps Scan Complete\nSee artifacts for full report.'; }
+            const {data:comments} = await github.rest.issues.listComments({
+              owner:context.repo.owner, repo:context.repo.repo, issue_number:context.issue.number
             });
-            const existing = comments.find(c => c.body.includes('🛡️ SecurOps'));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body: summary
-              });
+            const ex = comments.find(c => c.body.includes('🛡️ SecurOps'));
+            if (ex) {
+              await github.rest.issues.updateComment({owner:context.repo.owner,repo:context.repo.repo,comment_id:ex.id,body});
             } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body: summary
-              });
+              await github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:context.issue.number,body});
             }
 
   # ══════════════════════════════════════════════════════════
-  # JOB 5: SECURITY GATE — blocks merge if any scan fails
+  # JOB 8: SECURITY GATE — final decision, blocks merge
   # ══════════════════════════════════════════════════════════
   security-gate:
     name: "🚦 Security Gate"
     runs-on: ubuntu-latest
-    needs: [secret-scan, sast-scan, dependency-scan]
+    needs: [secret-scan, sast-scan, sca-scan, dast-scan, iac-scan]
     if: always()
     steps:
-      - name: Evaluate all scan results
+      - name: Evaluate all 5 scan results
         run: |
           echo "════════════════════════════════════════"
-          echo "  SecurOps Security Gate"
+          echo "  SecurOps Security Gate — All 5 Tools"
           echo "════════════════════════════════════════"
-          echo "  🔐 Secret Scanning:     ${{ needs.secret-scan.result }}"
-          echo "  🔍 SAST Scanning:       ${{ needs.sast-scan.result }}"
-          echo "  🛡️  Dependency Scanning: ${{ needs.dependency-scan.result }}"
+          echo "  🔐 Secrets  (Gitleaks):  ${{ needs.secret-scan.result }}"
+          echo "  🔍 SAST     (Semgrep):   ${{ needs.sast-scan.result }}"
+          echo "  🛡️  SCA      (Trivy):     ${{ needs.sca-scan.result }}"
+          echo "  🌐 DAST     (Nuclei):    ${{ needs.dast-scan.result }}"
+          echo "  🏗️  IaC      (Checkov):   ${{ needs.iac-scan.result }}"
           echo "════════════════════════════════════════"
-
           FAILED=false
-
-          [ "${{ needs.secret-scan.result }}"     != "success" ] && echo "  ❌ Secret scan failed"     && FAILED=true
-          [ "${{ needs.sast-scan.result }}"        != "success" ] && echo "  ❌ SAST scan failed"        && FAILED=true
-          [ "${{ needs.dependency-scan.result }}"  != "success" ] && echo "  ❌ Dependency scan failed"  && FAILED=true
-
+          [ "${{ needs.secret-scan.result }}" != "success" ] && FAILED=true && echo "  ❌ Secrets scan failed"
+          [ "${{ needs.sast-scan.result }}"   != "success" ] && FAILED=true && echo "  ❌ SAST scan failed"
+          [ "${{ needs.sca-scan.result }}"    != "success" ] && FAILED=true && echo "  ❌ SCA scan failed"
+          [ "${{ needs.dast-scan.result }}"   != "success" ] && FAILED=true && echo "  ❌ DAST scan failed"
+          [ "${{ needs.iac-scan.result }}"    != "success" ] && FAILED=true && echo "  ❌ IaC scan failed"
           echo ""
           if [ "$FAILED" = "true" ]; then
-            echo "  ❌ SECURITY GATE FAILED — merge is BLOCKED"
-            echo "  Fix all issues or contact: security@yourcompany.com"
+            echo "  ❌ GATE FAILED — merge BLOCKED"
+            echo "  Fix all issues or: security@yourcompany.com"
             exit 1
           fi
-
-          echo "  ✅ SECURITY GATE PASSED — safe to merge"
+          echo "  ✅ GATE PASSED — safe to merge"

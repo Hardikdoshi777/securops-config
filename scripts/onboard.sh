@@ -30,7 +30,7 @@ SUPPORT_SLACK="#securops-support"
 SUPPORT_EMAIL="security@yourcompany.com"
 
 # ─────────────────────────────────────────────────────────
-# 5 FILES that get copied into every project repo
+# 6 FILES that get copied into every project repo
 # ─────────────────────────────────────────────────────────
 # Format: "source_path_in_config_repo|destination_path_in_project"
 FILES=(
@@ -39,6 +39,7 @@ FILES=(
   ".github/workflows/security-scan.yml|.github/workflows/security-scan.yml"
   "scripts/trivy-scan.sh|scripts/trivy-scan.sh"
   "scripts/generate-report.py|scripts/generate-report.py"
+  "scripts/ai-auto-fix.py|scripts/ai-auto-fix.py"
 )
 
 # ─────────────────────────────────────────────────────────
@@ -266,11 +267,12 @@ echo ""
 ok "${COPIED} file(s) copied, ${SKIPPED} already up to date"
 echo ""
 echo "  Files now in your project:"
-echo "    ✅ .pre-commit-config.yaml      ← hook definitions"
-echo "    ✅ .gitleaks.toml               ← 130+ secret patterns"
-echo "    ✅ .github/workflows/security-scan.yml  ← CI/CD pipeline"
-echo "    ✅ scripts/trivy-scan.sh        ← dependency scanner"
-echo "    ✅ scripts/generate-report.py   ← HTML dashboard"
+echo "    ✅ .pre-commit-config.yaml               ← hook definitions"
+echo "    ✅ .gitleaks.toml                        ← 130+ secret patterns"
+echo "    ✅ .github/workflows/security-scan.yml  ← CI/CD pipeline (5 tools)"
+echo "    ✅ scripts/trivy-scan.sh                ← dependency scanner"
+echo "    ✅ scripts/generate-report.py           ← dashboard + enrollment"
+echo "    ✅ scripts/ai-auto-fix.py               ← Claude AI auto-fix"
 
 # ─────────────────────────────────────────────────────────
 # STEP 5 — Install git hooks + validate
@@ -278,8 +280,8 @@ echo "    ✅ scripts/generate-report.py   ← HTML dashboard"
 step "5/5" "Installing git hooks + running validation..."
 
 # Install pre-commit hooks
-pre-commit install
-pre-commit install --hook-type pre-push
+pre-commit install --quiet
+pre-commit install --hook-type pre-push --quiet
 ok "Git hooks installed (runs on every commit automatically)"
 
 # Configure global git template so ALL future repos are protected

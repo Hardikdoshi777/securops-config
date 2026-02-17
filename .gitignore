@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reports (generated at runtime)
+security-dashboard.html
+security-summary.md
+ai-fix-report.md
+enrollment-tracking.json
