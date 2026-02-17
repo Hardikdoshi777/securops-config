@@ -1,0 +1,54 @@
+# ============================================================
+# SecurOps Gitleaks Configuration
+# File: .gitleaks.toml
+# Location: Root of securops-config repo AND every project repo
+# ============================================================
+
+title = "YourCompany SecurOps"
+
+# ─────────────────────────────────────────────────────────
+# COMPANY-SPECIFIC PATTERNS (customize these!)
+# ─────────────────────────────────────────────────────────
+
+[[rules]]
+id = "company-api-key"
+description = "YourCompany Internal API Key"
+regex = '''(?i)yourcompany[_-]?api[_-]?key[\s:=]["']?[a-zA-Z0-9]{32,}["']?'''
+tags = ["company", "api-key"]
+
+[[rules]]
+id = "company-service-token"
+description = "YourCompany Service Token"
+regex = '''yc_[a-zA-Z0-9]{40}'''
+tags = ["company", "service-token"]
+
+[[rules]]
+id = "company-internal-url"
+description = "Internal API URL hardcoded"
+regex = '''https?://api\.internal\.[a-z]+\.yourcompany\.com'''
+tags = ["company", "url"]
+
+# ─────────────────────────────────────────────────────────
+# ALLOWLIST (Approved exceptions - add with Security Team)
+# ─────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Approved exceptions for test files and examples"
+paths = [
+  '''tests/fixtures/.*''',
+  '''tests/mocks/.*''',
+  '''examples/.*''',
+  '''docs/.*''',
+  '''\.md$''',
+  '''CHANGELOG.*''',
+]
+regexes = [
+  '''example\.com''',
+  '''test[-_]?api[-_]?key''',
+  '''dummy[-_]?secret''',
+  '''fake[-_]?token''',
+  '''AKIAIOSFODNN7EXAMPLE''',
+  '''your[-_]?api[-_]?key[-_]?here''',
+  '''<YOUR_API_KEY>''',
+  '''<YOUR_SECRET>''',
+]
