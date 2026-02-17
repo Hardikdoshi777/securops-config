@@ -1,6 +1,6 @@
 SUBJECT: [ACTION REQUIRED] Security Tools Setup — Complete by [DATE]
 
-Hi [Name / Team],
+Hi DevRepublic Team,
 
 We are rolling out SecurOps — our company-wide shift-left security system.
 This protects our code, customers, and company from security breaches.
@@ -50,12 +50,11 @@ A: Yes. Required for our SOC2 compliance. Deadline: [DATE].
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Slack:  #securops-support (fastest)
-Email:  security@yourcompany.com
-Wiki:   https://wiki.yourcompany.com/securops
+Email:  hddevrepublic@gmail.com
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Thank you for helping keep our platform secure!
 
 Security Team
-YourCompany
+Hardik Doshi
