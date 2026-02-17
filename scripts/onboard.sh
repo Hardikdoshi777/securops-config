@@ -280,8 +280,8 @@ echo "    ✅ scripts/ai-auto-fix.py               ← Claude AI auto-fix"
 step "5/5" "Installing git hooks + running validation..."
 
 # Install pre-commit hooks
-pre-commit install --quiet
-pre-commit install --hook-type pre-push --quiet
+pre-commit install
+pre-commit install --hook-type pre-push
 ok "Git hooks installed (runs on every commit automatically)"
 
 # Configure global git template so ALL future repos are protected
