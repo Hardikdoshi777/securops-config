@@ -22,11 +22,11 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # Config - UPDATE THESE for your company
-COMPANY_NAME="YourCompany"
-CONFIG_REPO="https://github.com/yourcompany/securops-config.git"
+COMPANY_NAME="DevRepublic"
+CONFIG_REPO="https://github.com/Hardikdoshi777/securops-config.git"
 SECUROPS_DIR="$HOME/.securops"
 SUPPORT_SLACK="#securops-support"
-SUPPORT_EMAIL="security@yourcompany.com"
+SUPPORT_EMAIL="hddevrepublic@gmail.com"
 
 clear
 echo -e "${CYAN}${BOLD}"
