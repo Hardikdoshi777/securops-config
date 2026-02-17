@@ -184,9 +184,6 @@ chmod +x "$GIT_TEMPLATE/hooks/pre-commit"
 # Set global git template
 git config --global init.templateDir "$GIT_TEMPLATE"
 
-# Also set global gitleaks config
-git config --global core.hooksPath "$GIT_TEMPLATE/hooks" 2>/dev/null || true
-
 echo -e "  ✅ Git configured to use SecurOps hooks globally"
 echo -e "  ✅ All NEW git repos will auto-have security hooks"
 echo ""
@@ -212,8 +209,8 @@ if git rev-parse --git-dir > /dev/null 2>&1; then
   fi
 
   # Install hooks
-  pre-commit install --quiet
-  pre-commit install --hook-type pre-push --quiet
+  pre-commit install
+  pre-commit install --hook-type pre-push
   echo -e "  ✅ Pre-commit hooks installed in current project"
 else
   echo -e "  ${YELLOW}⚠️  Not in a git repo — skipping project setup${NC}"
